@@ -3,21 +3,37 @@
 })();
 
 function addButtons() {
-  const buttonLoad = document.createElement('button');
-  buttonLoad.innerText = 'Sync load';
-  buttonLoad.onclick = load;
-  const buttonSave = document.createElement('button');
-  buttonSave.innerText = 'Sync save';
-  buttonSave.onclick = save;
   const insert = document.getElementById('versionLog').parentNode;
+
+  const buttonLoad = document.createElement('button');
+  buttonLoad.innerText = 'load';
+  buttonLoad.onclick = load;
   insert.appendChild(buttonLoad);
+
+  const buttonSave = document.createElement('button');
+  buttonSave.innerText = 'save';
+  buttonSave.onclick = save;
   insert.appendChild(buttonSave);
+
+  const notifications = document.createElement('p');
+  notifications.id = 'sync-notify';
+  notifications.style = 'width: 50px; text-align: center;';
+  insert.appendChild(notifications);
+}
+
+function notify(text) {
+  const el = document.getElementById('sync-notify');
+  el.innerText = text;
+  setTimeout(() => {
+    el.innerText = '';
+  }, 3*1000);
 }
 
 function load() {
   chrome.storage.sync.get(null, function(items) {
     if (chrome.runtime.error || items === undefined) {
       console.log('[EvolveSync] no save to load')
+      notify('failed');
       return;
     }
     importSave(join(items));
@@ -31,6 +47,9 @@ function importSave(data) {
       if (b.innerText == "Import Game") {
         console.log('[EvolveSync] loading save');
         b.click();
+        // no need to notify:
+        // - click on import reloads the page, removing any notification
+        // - page reload is already a visible clue that load worked
       }
     }
   }
@@ -40,11 +59,13 @@ function save() {
   let data = window.localStorage.getItem('evolved') || false;
   if (!data) {
     console.log('[EvolveSync] no save available');
+    notify('failed');
     return;
   }
   const state = JSON.parse(LZString.decompressFromUTF16(data));
   if (!state) {
     console.log('[EvolveSync] save is corrupted');
+    notify('failed');
     return;
   }
   const save = LZString.compressToBase64(JSON.stringify(state));
@@ -52,6 +73,7 @@ function save() {
   const used = Math.floor(100 * JSON.stringify(chunks).length / QUOTA_BYTES);
   chrome.storage.sync.set(chunks);
   console.log(`[EvolveSync] saved: ${chunks.n} chunks, ${used}% storage used`);
+  notify('saved');
 }
 
 // The maximum total amount (in bytes) of data that can be stored in sync
