@@ -71,9 +71,10 @@ function save() {
   const save = LZString.compressToBase64(JSON.stringify(state));
   const chunks = split(save);
   const used = Math.floor(100 * JSON.stringify(chunks).length / QUOTA_BYTES);
-  chrome.storage.sync.set(chunks);
-  console.log(`[EvolveSync] saved: ${chunks.n} chunks, ${used}% storage used`);
-  notify('saved');
+  chrome.storage.sync.set(chunks, () => {
+    console.log(`[EvolveSync] saved: ${chunks.n} chunks, ${used}% storage used`);
+    notify('saved');
+  });
 }
 
 // The maximum total amount (in bytes) of data that can be stored in sync
